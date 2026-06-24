@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>受信画像モニター</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --line: #d9e0ea;
+      --text: #172033;
+      --muted: #68758a;
+      --blue: #2563eb;
+      --green: #15803d;
+      --red: #b42318;
+      --amber: #a15c07;
+      --dark: #0f172a;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    header {
+      border-bottom: 1px solid var(--line);
+      background: #ffffff;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 18px 20px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.2;
+    }
+
+    a.button,
+    button {
+      min-height: 38px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      background: var(--blue);
+      color: #fff;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 650;
+      padding: 8px 12px;
+      text-decoration: none;
+    }
+
+    button.secondary,
+    a.secondary {
+      background: #fff;
+      border-color: var(--line);
+      color: var(--text);
+    }
+
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 22px 20px 40px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 16px;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      border-radius: 999px;
+      background: #e7f0ff;
+      color: #174ea6;
+      font-size: 13px;
+      font-weight: 750;
+      padding: 4px 10px;
+    }
+
+    .badge.pass {
+      background: #e9f8ef;
+      color: var(--green);
+    }
+
+    .badge.fail {
+      background: #fff1f0;
+      color: var(--red);
+    }
+
+    .badge.warn {
+      background: #fff8e6;
+      color: var(--amber);
+    }
+
+    .photo-frame {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #eef2f7;
+      min-height: 420px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+
+    .photo-frame img {
+      width: 100%;
+      height: 100%;
+      max-height: 620px;
+      object-fit: contain;
+      background: #fff;
+    }
+
+    .empty {
+      color: var(--muted);
+      font-size: 14px;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .facts {
+      display: grid;
+      gap: 10px;
+    }
+
+    .fact {
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      gap: 4px;
+      padding: 0 0 10px;
+    }
+
+    .fact span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .fact strong {
+      overflow-wrap: anywhere;
+    }
+
+    .matches {
+      display: grid;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .match {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px;
+    }
+
+    .result {
+      min-height: 220px;
+      max-height: 420px;
+      overflow: auto;
+      margin: 14px 0 0;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--dark);
+      color: #dbeafe;
+      font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      padding: 12px;
+      white-space: pre-wrap;
+    }
+
+    @media (max-width: 860px) {
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .photo-frame {
+        min-height: 300px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <div>
+        <h1>受信画像モニター</h1>
+        <div class="muted">Raspberry Pi：POST /receive_photo、form-data フィールド photo</div>
+      </div>
+      <a class="button secondary" href="/manage">顔登録・管理</a>
+    </div>
+  </header>
+
+  <main class="grid">
+    <section>
+      <div class="status-row">
+        <h2>最新の受信画像</h2>
+        <button id="refresh" type="button" class="secondary">更新</button>
+      </div>
+      <div id="photo-frame" class="photo-frame">
+        <div class="empty">まだ画像を受信していません。</div>
+      </div>
+    </section>
+
+    <section>
+      <div class="status-row">
+        <h2>認識結果</h2>
+        <span id="status-badge" class="badge">待機中</span>
+      </div>
+
+      <div id="facts" class="facts">
+        <div class="empty">Raspberry Pi から画像が届くと結果が表示されます。</div>
+      </div>
+
+      <div id="matches" class="matches"></div>
+      <pre id="raw-result" class="result">{}</pre>
+    </section>
+  </main>
+
+  <script>
+    const API_BASE = window.location.protocol === "file:" ? "http://127.0.0.1:8000" : "";
+    const photoFrame = document.querySelector("#photo-frame");
+    const statusBadge = document.querySelector("#status-badge");
+    const factsEl = document.querySelector("#facts");
+    const matchesEl = document.querySelector("#matches");
+    const rawResult = document.querySelector("#raw-result");
+    const refreshButton = document.querySelector("#refresh");
+
+    function apiUrl(path) {
+      return `${API_BASE}${path}`;
+    }
+
+    function assetUrl(path) {
+      if (!path) return "";
+      if (path.startsWith("http://") || path.startsWith("https://")) return path;
+      return `${API_BASE}${path}`;
+    }
+
+    function pretty(data) {
+      return JSON.stringify(data, null, 2);
+    }
+
+    function setBadge(text, mode) {
+      statusBadge.textContent = text;
+      statusBadge.className = `badge ${mode || ""}`.trim();
+    }
+
+    function setPhoto(latest) {
+      photoFrame.replaceChildren();
+      if (!latest || !latest.image_url) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "まだ画像を受信していません。";
+        photoFrame.appendChild(empty);
+        return;
+      }
+
+      const image = document.createElement("img");
+      image.src = `${assetUrl(latest.image_url)}?t=${Date.now()}`;
+      image.alt = "最新の受信画像";
+      photoFrame.appendChild(image);
+    }
+
+    function fact(label, value) {
+      const item = document.createElement("div");
+      item.className = "fact";
+      const labelEl = document.createElement("span");
+      labelEl.textContent = label;
+      const valueEl = document.createElement("strong");
+      valueEl.textContent = value || "-";
+      item.append(labelEl, valueEl);
+      return item;
+    }
+
+    function renderLatest(latest) {
+      setPhoto(latest);
+      factsEl.replaceChildren();
+      matchesEl.replaceChildren();
+      rawResult.textContent = pretty(latest || {});
+
+      if (!latest) {
+        setBadge("待機中", "");
+        factsEl.innerHTML = '<div class="empty">Raspberry Pi から画像が届くと結果が表示されます。</div>';
+        return;
+      }
+
+      if (!latest.ok) {
+        setBadge("失敗", "fail");
+        factsEl.append(
+          fact("受信時刻", latest.received_at),
+          fact("ファイル名", latest.filename),
+          fact("エラー", latest.error)
+        );
+        return;
+      }
+
+      const recognition = latest.recognition || {};
+      const best = recognition.best_match || recognition.best_candidate;
+      setBadge(recognition.recognized ? "一致" : "不一致", recognition.recognized ? "pass" : "warn");
+      factsEl.append(
+        fact("受信時刻", latest.received_at),
+        fact("ファイル名", latest.filename),
+        fact("判定", recognition.recognized ? "登録済み人物と一致" : "登録済み人物と一致しません"),
+        fact("候補", best ? `${best.name} (${best.similarity})` : "-"),
+        fact("顔検出", recognition.yolo ? recognition.yolo.status : "-")
+      );
+
+      (recognition.matches || []).forEach((match) => {
+        const item = document.createElement("div");
+        item.className = "match";
+        const name = document.createElement("strong");
+        name.textContent = match.name;
+        const score = document.createElement("span");
+        score.className = "muted";
+        score.textContent = `similarity ${match.similarity}`;
+        item.append(name, score);
+        matchesEl.appendChild(item);
+      });
+    }
+
+    async function loadLatest() {
+      try {
+        const response = await fetch(apiUrl("/api/latest"));
+        const data = await response.json();
+        if (!response.ok || data.ok === false) {
+          throw data;
+        }
+        renderLatest(data.has_latest ? data.latest : null);
+      } catch (error) {
+        setBadge("接続失敗", "fail");
+        factsEl.replaceChildren();
+        const message = document.createElement("div");
+        message.className = "empty";
+        message.textContent = `API に接続できません: ${error.error || error.message || error}`;
+        factsEl.appendChild(message);
+      }
+    }
+
+    refreshButton.addEventListener("click", loadLatest);
+    loadLatest();
+    setInterval(loadLatest, 3000);
+  </script>
+</body>
+</html>

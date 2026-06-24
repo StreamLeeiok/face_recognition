@@ -1,0 +1,33 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+
+# 工具缓存
+.matplotlib/
+.ultralytics/
+
+# InsightFace模型（首次运行时自动下载）
+models/insightface/
+
+# 运行时数据和敏感人脸数据
+known_faces/
+face_embeddings/
+images/
+uploads/
+received/
+outputs/
+faces/
+
+
+# 密钥
+scripts/serviceAccountKey.json
+scripts/serviceaccountkey.json

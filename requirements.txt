@@ -1,0 +1,9 @@
+ultralytics
+opencv-python
+omegaconf
+insightface
+onnxruntime
+fastapi
+uvicorn
+python-multipart
+firebase-admin
