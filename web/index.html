@@ -350,23 +350,32 @@
 
       const recognition = latest.recognition || {};
       const best = recognition.best_match || recognition.best_candidate;
+      const faceCount = recognition.yolo ? recognition.yolo.face_count : 0;
+      const recognizedCount = (recognition.recognized_faces || []).length;
       setBadge(recognition.recognized ? "一致" : "不一致", recognition.recognized ? "pass" : "warn");
       factsEl.append(
         fact("受信時刻", latest.received_at),
         fact("ファイル名", latest.filename),
-        fact("判定", recognition.recognized ? "登録済み人物と一致" : "登録済み人物と一致しません"),
+        fact("判定", recognition.recognized ? `${recognizedCount}人が登録済み人物と一致` : "登録済み人物と一致しません"),
         fact("候補", best ? `${best.name} (${best.similarity})` : "-"),
-        fact("顔検出", recognition.yolo ? recognition.yolo.status : "-")
+        fact("顔検出", recognition.yolo ? `${recognition.yolo.status} / ${faceCount}人` : "-")
       );
 
-      (recognition.matches || []).forEach((match) => {
+      (recognition.faces || []).forEach((face) => {
         const item = document.createElement("div");
         item.className = "match";
         const name = document.createElement("strong");
-        name.textContent = match.name;
+        const bestFace = face.best_match || face.best_candidate;
+        name.textContent = bestFace ? `${face.index + 1}. ${bestFace.name}` : `${face.index + 1}. 認識不可`;
         const score = document.createElement("span");
         score.className = "muted";
-        score.textContent = `similarity ${match.similarity}`;
+        if (face.error) {
+          score.textContent = face.error;
+        } else if (bestFace) {
+          score.textContent = `${face.recognized ? "一致" : "候補"} similarity ${bestFace.similarity}`;
+        } else {
+          score.textContent = "候補なし";
+        }
         item.append(name, score);
         matchesEl.appendChild(item);
       });

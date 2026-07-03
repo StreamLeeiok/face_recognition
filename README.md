@@ -27,13 +27,29 @@ Raspberry Piから送信された画像をPCで受信し、YOLOとInsightFaceを
 ## 機能
 
 - Raspberry PiからJPEG画像を受信
-- YOLOによる顔検出
-- InsightFaceによる顔認証
+- YOLOによる顔検出（1枚の画像に複数人が写っている場合も検出）
+- InsightFaceによる顔認証（検出した顔ごとに照合）
 - 最新画像と認証結果をWeb画面に表示
 - Web画面から顔写真を登録・削除
-- Firestoreの既存memberを出席状態に更新
+- Firestoreの既存memberを出席状態に更新（複数人が認識成功した場合は全員分更新）
 
 顔認証は、新しい画像を受信したときだけ実行されます。
+
+## 認証とDB更新の流れ
+
+Raspberry Piから新しい画像を受信すると、次の順番で処理します。
+
+1. `images/` に受信画像を保存
+2. YOLOで画像内の顔を検出
+3. 検出した顔ごとにInsightFaceで登録済み顔と照合
+4. 類似度がしきい値以上の人物だけ認識成功
+5. 認識成功した人物の `members/<student_id>` をFirestoreで更新
+
+2人以上写っている写真でも、認識成功した人物は全員DB更新対象になります。
+
+ただし、YOLOで顔を検出しても、InsightFaceの類似度がしきい値未満の場合はDB更新されません。
+
+現在のしきい値は `scripts/face_embeddings.py` の `DEFAULT_THRESHOLD = 0.5` です。
 
 ## 必要なファイル
 
@@ -102,6 +118,17 @@ y-yasukawa_安川.jpg
 
 この場合、学生IDは `y-yasukawa`、氏名は `安川` です。Firestoreの `members/y-yasukawa` が更新されます。
 
+管理画面の入力欄よりも、アップロードした画像ファイル名が優先されます。
+
+ファイル名が `y-yasukawa_安川.jpg` の場合、登録時に次のように解析されます。
+
+```text
+student_id: y-yasukawa
+name: 安川
+```
+
+ファイル名に `_` がない場合は、管理画面の入力欄の値をもとに登録IDを作成します。
+
 ## 導入方法
 
 ### macOS
@@ -167,3 +194,21 @@ python rasp.py
 Raspberry Piからは、`multipart/form-data` の `photo` フィールドでJPEG画像を送信します。
 
 HTMLファイルを直接開かず、必ず上記のHTTPアドレスからアクセスしてください。
+
+## ログの確認
+
+登録時に、ファイル名から抽出したIDと名前がWeb画面側のターミナルに出力されます。
+
+```text
+登録ID解析: source=y-yasukawa_安川 person_id=y-yasukawa_安川 student_id=y-yasukawa name=安川
+```
+
+Raspberry Piから画像を受信した時は、画像受信サービス側のターミナルに検出人数、認識成功人数、各顔の候補が出力されます。
+
+```text
+YOLO検出人数: 2 認識成功人数: 1 threshold: 0.5
+顔 0 recognized= True best= ... error= None
+顔 1 recognized= False best= ... error= None
+```
+
+`YOLO検出人数` は画像内で検出した顔の数です。`認識成功人数` は登録済み顔としきい値以上で一致した人数です。

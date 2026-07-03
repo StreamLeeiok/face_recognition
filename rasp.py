@@ -46,21 +46,60 @@ async def receive_photo(photo: UploadFile = File(...)):
     try:
         # Face recognition is intentionally triggered only when a new Raspberry Pi photo arrives.
         recognition = recognize_face(filepath, threshold=DEFAULT_THRESHOLD)
-        database_result = {
-            "saved": False,
-            "reason": "face_not_recognized",
-        }
-        if recognition["recognized"]:
-            best_match = recognition["best_match"]
+        print(
+            "YOLO検出人数:",
+            recognition.get("yolo", {}).get("face_count", 0),
+            "認識成功人数:",
+            len(recognition.get("recognized_faces", [])),
+            "threshold:",
+            recognition.get("threshold"),
+            flush=True,
+        )
+        for face in recognition.get("faces", []):
+            best = face.get("best_match") or face.get("best_candidate")
+            print(
+                "顔",
+                face.get("index"),
+                "recognized=",
+                face.get("recognized"),
+                "best=",
+                best,
+                "error=",
+                face.get("error"),
+                flush=True,
+            )
+        database_updates = []
+        updated_student_ids = set()
+        for face in recognition.get("recognized_faces", []):
+            best_match = face.get("best_match")
+            if not best_match:
+                continue
+
+            student_id = best_match["student_id"]
+            print("学生ID:", student_id, flush=True)
+            if student_id in updated_student_ids:
+                continue
+
             try:
-                database_result = mark_present(
-                    student_id=best_match["student_id"],
-                )
+                database_updates.append(mark_present(student_id=student_id))
+                updated_student_ids.add(student_id)
+                print("更新:", student_id, flush=True)
             except Exception as database_error:
-                database_result = {
-                    "saved": False,
-                    "error": str(database_error),
-                }
+                database_updates.append(
+                    {
+                        "saved": False,
+                        "student_id": student_id,
+                        "error": str(database_error),
+                    }
+                )
+
+        database_result = {
+            "saved": any(update.get("saved") for update in database_updates),
+            "updated_count": sum(1 for update in database_updates if update.get("saved")),
+            "updates": database_updates,
+        }
+        if not database_updates:
+            database_result["reason"] = "face_not_recognized"
 
         result = {
             "ok": True,
